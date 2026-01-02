@@ -1,6 +1,3 @@
 fastapi
-pydantic
-starlette
-typing-extensions
 beautifulsoup4
 httpx
