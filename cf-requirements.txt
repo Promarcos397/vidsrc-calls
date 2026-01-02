@@ -1,3 +1,0 @@
-fastapi
-beautifulsoup4
-httpx
