@@ -5,10 +5,6 @@ from models import vidsrctoget, vidsrcmeget, info, fetch
 from io import BytesIO
 from fastapi.responses import StreamingResponse
 
-# --- Cloudflare Imports ---
-from js import Response as CfResponse
-import json
-
 app = FastAPI()
 
 app.add_middleware(
@@ -48,11 +44,13 @@ async def vsrcme(dbid:str = '', s:int=None, e:int=None, l:str='eng'):
 @app.get('/streams/{dbid}')
 async def streams(dbid:str = '', s:int=None, e:int=None, l:str='eng'):
     if dbid:
-        # Note: Ensure vidsrcmeget and vidsrctoget return lists so they can be added
+        # We await both concurrently or sequentially
+        res_me = await vidsrcmeget(dbid, s, e)
+        res_to = await vidsrctoget(dbid, s, e)
         return {
             "status": 200,
             "info": "success",
-            "sources": await vidsrcmeget(dbid, s, e) + await vidsrctoget(dbid, s, e)
+            "sources": res_me + res_to
         }
     else:
         raise HTTPException(status_code=404, detail=f"Invalid id: {dbid}")
@@ -65,9 +63,6 @@ async def subs(url: str):
         with gzip.open(BytesIO(response.content), 'rt', encoding='utf-8') as f:
             subtitle_content = f.read()
             
-        # Cloudflare Note: StreamingResponse acts differently in Workers.
-        # Since you are reading the whole file into memory anyway (f.read()), 
-        # it is safer to return a direct response here for stability.
         return StreamingResponse(
             iter([subtitle_content]), 
             media_type="application/octet-stream", 
@@ -75,13 +70,5 @@ async def subs(url: str):
         )
 
     except Exception as e:
-        # Log error for debugging
         print(f"Error in subs: {e}")
         raise HTTPException(status_code=500, detail="Error fetching subtitle")
-
-# ==============================================================================
-# CLOUDFLARE WORKER ENTRY POINT (THE BRIDGE)
-# ==============================================================================
-async def on_fetch(request, env):
-    import asgi
-    return await asgi.fetch(app, request, env)
