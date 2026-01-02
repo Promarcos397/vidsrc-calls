@@ -1,5 +1,5 @@
-name = "my-fastapi-worker"
-main = "main.py" 
+name = "vidsrc-calls"
+main = "main.py"
 compatibility_date = "2024-04-01"
 compatibility_flags = ["python_workers"]
 
